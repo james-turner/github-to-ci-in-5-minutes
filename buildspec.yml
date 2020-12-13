@@ -1,0 +1,17 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 12
+  build:
+    commands:
+      - yum install zip -y
+      - echo Build started on `date`
+      - npm install
+      - npm run test
+      - npm prune --production
+      - npm run package
+  post_build:
+    commands:
+      - aws s3 cp package.zip s3://$RESOURCES_BUCKET/$COMMIT_HASH/lambdas/

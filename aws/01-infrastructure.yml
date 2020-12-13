@@ -1,0 +1,24 @@
+Description: "Infrastructure for artifacts"
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  BranchName:
+    Type: String
+
+Resources:
+
+  ArtifactsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+Outputs:
+  ArtifactsBucket:
+    Description: Bucket for storing packaged libs in
+    Value: !Ref ArtifactsBucket
+    Export:
+      Name: !Sub ArtifactsBucket-${BranchName}

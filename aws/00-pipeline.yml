@@ -1,0 +1,181 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  CredentialsArn:
+    Type: String
+  RepositoryId:
+    Type: String
+  BranchName:
+    Type: String
+  ProjectName:
+    Type: String
+
+Resources:
+
+  CodePipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: code-pipeline
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:*
+                  - cloudwatch:*
+                  - cloudformation:*
+                  - iam:PassRole
+                  - codebuild:*
+                Resource: "*"
+
+  DeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+                - cloudformation.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  CodePipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      ArtifactStores:
+        - ArtifactStore:
+            Location: !Ref S3Bucket
+            Type: S3
+          Region: !Ref AWS::Region
+      RoleArn: !GetAtt CodePipelineRole.Arn
+      RestartExecutionOnUpdate: true
+      Stages:
+        - Name: "Source"
+          Actions:
+            - Name: SourceCode
+              Namespace: "SourceVariables"
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeStarSourceConnection
+                Version: 1
+              Configuration:
+                BranchName: !Ref BranchName
+                FullRepositoryId: !Ref RepositoryId
+                ConnectionArn: !Ref CredentialsArn
+              OutputArtifacts:
+                - Name: !Ref ProjectName
+              RunOrder: 1
+        - Name: "Deploy-Pipeline"
+          Actions:
+            - Name: "Deploy-CodePipeline"
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: 1
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                StackName: !Sub "${ProjectName}-pipeline-${BranchName}"
+                TemplatePath: !Sub "${ProjectName}::aws/00-pipeline.yml"
+                Capabilities: "CAPABILITY_NAMED_IAM"
+                RoleArn: !GetAtt DeployRole.Arn
+                ParameterOverrides: !Sub |
+                  {
+                    "BranchName": "${BranchName}",
+                    "CredentialsArn": "${CredentialsArn}",
+                    "RepositoryId": "${RepositoryId}",
+                    "ProjectName": "${ProjectName}"
+                  }
+              InputArtifacts:
+                - Name: !Ref ProjectName
+              RunOrder: 1
+        - Name: "Deploy-Infrastructure"
+          Actions:
+            - Name: "Deploy-Infrastructure"
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: 1
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                StackName: !Sub "${ProjectName}-infrastructure-${BranchName}"
+                TemplatePath: !Sub "${ProjectName}::aws/01-infrastructure.yml"
+                Capabilities: "CAPABILITY_NAMED_IAM"
+                RoleArn: !GetAtt DeployRole.Arn
+                ParameterOverrides: !Sub |
+                  {
+                    "BranchName": "${BranchName}"
+                  }
+              InputArtifacts:
+                - Name: !Ref ProjectName
+              RunOrder: 1
+        - Name: "Deploy-CodeBuild"
+          Actions:
+            - Name: "Deploy-CodeBuild"
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: 1
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                StackName: !Sub "${ProjectName}-codebuild-${BranchName}"
+                TemplatePath: !Sub "${ProjectName}::aws/02-codebuild.yml"
+                Capabilities: "CAPABILITY_NAMED_IAM"
+                RoleArn: !GetAtt DeployRole.Arn
+                ParameterOverrides: !Sub |
+                  {
+                    "ProjectName": "${ProjectName}",
+                    "BranchName": "${BranchName}"
+                  }
+              InputArtifacts:
+                - Name: !Ref ProjectName
+              RunOrder: 1
+            - Name: "Build-And-Package"
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: 1
+              Configuration:
+                ProjectName: !Sub ${ProjectName}-${BranchName}
+                EnvironmentVariables: !Sub |
+                  [
+                    {
+                      "name": "COMMIT_HASH",
+                      "value": "#{SourceVariables.CommitId}",
+                      "type": "PLAINTEXT"
+                    }
+                  ]
+              InputArtifacts:
+                - Name: !Ref ProjectName
+              RunOrder: 2
