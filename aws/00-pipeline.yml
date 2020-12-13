@@ -35,6 +35,7 @@ Resources:
                   - cloudformation:*
                   - iam:PassRole
                   - codebuild:*
+                  - codestar-connections:*
                 Resource: "*"
 
   DeployRole:
