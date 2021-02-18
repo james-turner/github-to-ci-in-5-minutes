@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-CREDENTIALS_ARN=$(aws codestar-connections list-connections --provider-type-filter GitHub --max-results 10 --query "Connections[?ConnectionStatus=='AVAILABLE']|[0].ConnectionArn" --output text)
+SOURCE_TYPE=$(git remote -v | grep push | cut -d ':' -f1 | cut -d '@' -f2 | cut -d '.' -f1)
+SOURCE_TYPE=$(tr '[:lower:]' '[:upper:]' <<< ${SOURCE_TYPE:0:1})${SOURCE_TYPE:1}
+CREDENTIALS_ARN=$(aws codestar-connections list-connections --provider-type-filter $SOURCE_TYPE --max-results 10 --query "Connections[?ConnectionStatus=='AVAILABLE']|[0].ConnectionArn" --output text)
 BRANCH=$(git branch --no-color 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
 PROJECT_NAME=$(basename `pwd`)
 REPOSITORY_OWNER=$(git remote -v | grep push | cut -d ':' -f2 | cut -d '/' -f1)
