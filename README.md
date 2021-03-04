@@ -28,7 +28,7 @@ After these credentials have been obtained you can create the first stack which 
 
     CREDENTIALS_ARN=$(aws codestar-connections list-connections --provider-type-filter GitHub --max-results 10 --query "Connections[?ConnectionStatus=='AVAILABLE']|[0].ConnectionArn" --output text)
     BRANCH=master
-    PROJECT_NAME=github-to-ci-in-5-minutes
+    PROJECT_NAME=$(basename $PWD)
     REPOSITORY_ID=james-turner/$PROJECT_NAME
     aws cloudformation deploy \
         --template-file aws/00-pipeline.yml \
