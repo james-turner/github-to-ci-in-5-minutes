@@ -20,5 +20,3 @@ Outputs:
   ArtifactsBucket:
     Description: Bucket for storing packaged libs in
     Value: !Ref ArtifactsBucket
-    Export:
-      Name: !Sub ArtifactsBucket-${BranchName}
