@@ -27,8 +27,8 @@ Now verify you have a valid AVAILABLE Github connection:
 After these credentials have been obtained you can create the first stack which will then do the rest.
 
     CREDENTIALS_ARN=$(aws codestar-connections list-connections --provider-type-filter GitHub --max-results 10 --query "Connections[?ConnectionStatus=='AVAILABLE']|[0].ConnectionArn" --output text)
-    BRANCH=master
-    PROJECT_NAME=$(basename $PWD)
+    BRANCH=$(git branch --no-color 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
+    PROJECT_NAME=$(basename `pwd`)
     REPOSITORY_OWNER=$(git remote -v | grep push | cut -d ':' -f2 | cut -d '/' -f1)
     REPOSITORY_ID=$REPOSITORY_OWNER/$PROJECT_NAME
     aws cloudformation deploy \
