@@ -138,8 +138,11 @@ Resources:
                   {
                     "BranchName": "${BranchName}"
                   }
+                OutputFileName: "infrastructure-stack-output.json"
               InputArtifacts:
                 - Name: !Ref ProjectName
+              OutputArtifacts:
+                - Name: !Sub "${ProjectName}-infrastructure"
               RunOrder: 1
         - Name: "Deploy-CodeBuild"
           Actions:
@@ -159,10 +162,12 @@ Resources:
                 ParameterOverrides: !Sub |
                   {
                     "ProjectName": "${ProjectName}",
-                    "BranchName": "${BranchName}"
+                    "BranchName": "${BranchName}",
+                    "ArtifactsBucket": { "Fn::GetParam" : ["${ProjectName}-infrastructure", "infrastructure-stack-output.json", "ArtifactsBucket"]}
                   }
               InputArtifacts:
                 - Name: !Ref ProjectName
+                - Name: !Sub "${ProjectName}-infrastructure"
               RunOrder: 1
             - Name: "Build-And-Package"
               ActionTypeId:
