@@ -106,6 +106,7 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 StackName: !Sub "${ProjectName}-pipeline-${BranchName}"
                 TemplatePath: !Sub "${ProjectName}::aws/00-pipeline.yml"
+                TemplateConfiguration: !Sub "${ProjectName}::aws/metadata.json"
                 Capabilities: "CAPABILITY_NAMED_IAM"
                 RoleArn: !GetAtt DeployRole.Arn
                 ParameterOverrides: !Sub |
@@ -130,6 +131,7 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 StackName: !Sub "${ProjectName}-infrastructure-${BranchName}"
                 TemplatePath: !Sub "${ProjectName}::aws/01-infrastructure.yml"
+                TemplateConfiguration: !Sub "${ProjectName}::aws/metadata.json"
                 Capabilities: "CAPABILITY_NAMED_IAM"
                 RoleArn: !GetAtt DeployRole.Arn
                 ParameterOverrides: !Sub |
@@ -151,6 +153,7 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 StackName: !Sub "${ProjectName}-codebuild-${BranchName}"
                 TemplatePath: !Sub "${ProjectName}::aws/02-codebuild.yml"
+                TemplateConfiguration: !Sub "${ProjectName}::aws/metadata.json"                
                 Capabilities: "CAPABILITY_NAMED_IAM"
                 RoleArn: !GetAtt DeployRole.Arn
                 ParameterOverrides: !Sub |
